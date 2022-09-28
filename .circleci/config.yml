@@ -5,7 +5,7 @@ version: 2.1
 orbs:
   # Choose either one of the orbs below
   # welcome: circleci/welcome-orb@0.4.1
-  # aws-cli: circleci/aws-cli@2.0.3
+  aws-cli: circleci/aws-cli@2.0.3
 # Define the jobs we want to run for this project
 
 commands:
@@ -13,12 +13,12 @@ commands:
    destroy_environment:
      steps:
        - run:
-           name: Destroy environment
-           # ${CIRCLE_WORKFLOW_ID} is a Built-in environment variable 
-           # ${CIRCLE_WORKFLOW_ID:0:5} takes the first 5 chars of the variable CIRCLE_CI_WORKFLOW_ID 
-           when: on_fail
-           command: |
-             aws cloudformation delete-stack --stack-name myStack-${CIRCLE_WORKFLOW_ID:0:5}
+          name: Destroy environment
+          # ${CIRCLE_WORKFLOW_ID} is a Built-in environment variable 
+          # ${CIRCLE_WORKFLOW_ID:0:5} takes the first 5 chars of the variable CIRCLE_CI_WORKFLOW_ID 
+          when: on_fail
+          command: |
+            aws cloudformation delete-stack --stack-name myStack-${CIRCLE_WORKFLOW_ID:0:5}
 
 jobs:
   # create_infrastructure: 
@@ -39,14 +39,18 @@ jobs:
     docker:
       - image: amazon/aws-cli
     steps:
-    - checkout
-    - run:
-        name: Create Cloudformation Stack
-        command: |
-          aws cloudformation deploy \
-            --template-file template.yml \
-            --stack-name myStack-${CIRCLE_WORKFLOW_ID:0:5} \
-            --region us-east-1
+      - checkout
+      - run:
+          name: Create Cloudformation Stack
+          command: |
+            aws cloudformation deploy \
+              --template-file template.yml \
+              --stack-name myStack-${CIRCLE_WORKFLOW_ID:0:5} \
+              --region us-east-1
+      # Fail the job intentionally to simulate an error.
+      # Uncomment the line below if you want to fail the current step
+      # - run: return 1
+      - destroy_environment
 
   # configure_infrastructure: 
   #   docker:
@@ -92,12 +96,19 @@ jobs:
     docker:
       - image: alpine:latest
     steps:
+      - run: apk add --update curl
       - run:
-          name: Test job
-          # Fail the job intentionally to simulate an error.
-          command:  return 1
-      - destroy_environment  
-
+          name: smoke test
+          command: |
+            URL="https://blog.udacity.com/"
+            # Test if website exists
+            if curl -s --head ${URL} 
+            then
+              return 0
+            else
+              return 1
+            fi
+      - destroy_environment      
 
 # Sequential workflow
 workflows:
